@@ -1,4 +1,4 @@
-#include "I2Cdev.h"
+#include "ITG3205.h"
 
 #define GYRO 0x68 //  when AD0 is connected to GND ,gyro address is 0x68.
 //#define GYRO 0x69   when AD0 is connected to VCC ,gyro address is 0x69  
@@ -11,7 +11,6 @@
 int g_offx = 120;
 int g_offy = 20;
 int g_offz = 93;
-int hx, hy, hz, turetemp;
 
 
 ////////// GYROSCOPE INITIALIZATION //////////
@@ -46,7 +45,7 @@ void getGyroscopeData(int * result)
  int regAddress = 0x1B;
  int temp, x, y, z;
  byte buff[G_TO_READ];
- I2Cdev_readByte(GYRO, regAddress, G_TO_READ, buff, 0); //read the gyro data from the ITG3205
+ I2Cdev_readByte(GYRO, regAddress, buff, 0); //read the gyro data from the ITG3205
  result[0] = ((buff[2] << 8) | buff[3]) + g_offx;
  result[1] = ((buff[4] << 8) | buff[5]) + g_offy;
  result[2] = ((buff[6] << 8) | buff[7]) + g_offz;
