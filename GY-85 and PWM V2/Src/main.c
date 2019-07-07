@@ -55,24 +55,26 @@ TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-/*Инициализируем переменные *************************************************** */
-float rawDataGyroX, rawDataGyroY, rawDataGyroZ, rawDataGyroTemp;   /*Параметры гироскопа: угловая скорость в град/сек, температура в цельсиях */
-int rawDataGyro[4];                                     /*Массив сырых данных гироскопа */
-int rawDataMagnet[4];                               /*Массив сырых данных магнетометра */
-float heading;                                  /*Понять что за переменная в радианах */
-float headingDegrees;                          /*Понять что за переменная в градусах */
-uint8_t PWM_4 = 0;          /*Переменная  */
-uint8_t PWM_2 = 0;
+/*Инициализируем переменные ****************************************************************************** */
+float rawDataGyroX, rawDataGyroY, rawDataGyroZ, rawDataGyroTemp; /*Параметры гироскопа: угловая скорость в град/сек, температура в цельсиях */
+int rawDataGyro[4];												 /*Массив сырых данных гироскопа */
+int rawDataMagnet[3];											 /*Массив сырых данных магнетометра */
+float heading;													 /*Понять что за переменная в радианах */
+float headingDegrees;											 /*Понять что за переменная в градусах */
+uint8_t PWM_PA3 = 50;											 /*Переменная со значением ШИМ на PA3 */
+uint8_t PWM_PA1 = 150;											 /*Переменная со значением ШИМ на PA1 */
 /****************************************************************************** */
 
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
+/*Объявление функций для инициализации модулей (трогать не нужно) ************************************** */
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_USART1_UART_Init(void);
+/********************************************************************************************************** */
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -86,6 +88,7 @@ static void MX_USART1_UART_Init(void);
  * @brief  The application entry point.
  * @retval int
  */
+/* Главная функция ***************************************************************************************** */
 int main(void) {
 	/* USER CODE BEGIN 1 */
 
@@ -94,17 +97,19 @@ int main(void) {
 	/* MCU Configuration--------------------------------------------------------*/
 
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	/* Инициализируем библиотеку HAL и подаем 1 на I2C (трогать не нужно) */
 	HAL_Init();
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
 	HAL_Delay(100);
+	/* *************************************************************************** */
 	/* USER CODE BEGIN Init */
 
 	/* USER CODE END Init */
-
+	/*Конфигурация системного счетчика (трогать не нужно) ****************************************************** */
 	/* Configure the system clock */
 	SystemClock_Config();
-
+	/*********************************************************************************************************** */
 	/* USER CODE BEGIN SysInit */
 
 	/* USER CODE END SysInit */
@@ -120,28 +125,31 @@ int main(void) {
 	QMC5883L_init();
 	/*********************************************************************************************************** */
 	/* USER CODE BEGIN 2 */
+
+	/*Начинаем ШИМ ********************************************************************************************* */
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
-
+	/*********************************************************************************************************** */
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
+  /*Бесконечный цикл ***************************************************************************************** */
 	while (1) {
+
+    /*Получаем сырые данные с гироскопа и записываем значения угловой скорости в соответствующие переменные ** */
 		getGyroscopeData(rawDataGyro);
 		rawDataGyroX = rawDataGyro[0] / 14.375;
 		rawDataGyroY = rawDataGyro[1] / 14.375;
 		rawDataGyroZ = rawDataGyro[2] / 14.375;
-		rawDataGyroTemp = (35 + ((double)(rawDataGyro[3] + 13200)) / 280)/10; // temperature
-
-		QMC5883L_read(rawDataMagnet);
-		// rawDataMagnet[0] *= 0.001;
-		// rawDataMagnet[1] *= 0.001;
-		// rawDataMagnet[2] *= 0.001;
+		rawDataGyroTemp = (35 + ((double)(rawDataGyro[3] + 13200)) / 280) / 10; // temperature
+    /********************************************************************************************************* */
+		
+    /*Получаем сырые данные с магнитометра и записываем значения (узнать какие) в соответствующие переменные * */
+    QMC5883L_read(rawDataMagnet);
 		// Calculate heading when the rawDataMagnetometer is level, then correct for signs of axis.
 		// Atan2() automatically check the correct formula taking care of the quadrant you are in
 		heading = atan2(rawDataMagnet[1], rawDataMagnet[0]);
-
 		float declinationAngle = 0.12362748;
 		heading += declinationAngle;
 		// Find yours here: http://www.rawDataMagnetic-declination.com/
@@ -156,28 +164,30 @@ int main(void) {
 
 		// Convert radians to degrees for readability.
 		headingDegrees = heading * 180 / PI;
-
+    /************************************************************************************************************ */
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
-		// PWM_2 = roundf(rawDataGyroTemp * 23.27); // control LED via temperature
-		PWM_2 = 255 * (((rawDataGyroX + rawDataGyroY + rawDataGyroZ)) / 3) / 3300; // control LED via rawDataGyro
-		if (PWM_4 > 256) {
-			PWM_4 = 255;
+
+    /*Запись значений ШИМ и выставление значений ШИМ ************************************************************ */
+		if (PWM_PA3 > 256) {
+			PWM_PA3 = 255;        //проверка переизбытка ШИМ
 		}
-		if (PWM_2 > 256) {
-			PWM_2 = 255;
+		if (PWM_PA1 > 256) {
+			PWM_PA1 = 255;        //проверка переизбытка ШИМ
 		}
-		htim2.Instance->CCR2 = PWM_2;
-		htim2.Instance->CCR4 = PWM_4;
-		// PWM_2 += 1;
-		PWM_4 += 1;
+		htim2.Instance->CCR2 = PWM_PA3;
+		htim2.Instance->CCR4 = PWM_PA1;
 
 		HAL_Delay(100);
 	}
+  /************************************************************************************************************ */
 	/* USER CODE END 3 */
 }
 
+/************************************************************************************************************** */
+
+/*Функции для инициализации модулей (трогать не нужно) ******************************************************** */
 /**
  * @brief System Clock Configuration
  * @retval None
@@ -419,3 +429,4 @@ void assert_failed(char *file, uint32_t line) {
 #endif /* USE_FULL_ASSERT */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+/************************************************************************************************************** */

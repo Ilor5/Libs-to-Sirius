@@ -14,21 +14,21 @@
 
 //Registers Control //0x09
 
-#define Mode_Standby    0b00000000
-#define Mode_Continuous 0b00000001
+#define Mode_Standby      0        //0b00000000
+#define Mode_Continuous   1        //0b00000001
 
-#define ODR_10Hz        0b00000000
-#define ODR_50Hz        0b00000100
-#define ODR_100Hz       0b00001000
-#define ODR_200Hz       0b00001100
+#define ODR_10Hz          1        //0b00000000
+#define ODR_50Hz          4        //0b00000100
+#define ODR_100Hz         8        //0b00001000
+#define ODR_200Hz         12       //0b00001100
 
-#define RNG_2G          0b00000000
-#define RNG_8G          0b00010000
+#define RNG_2G            0        //0b00000000
+#define RNG_8G            16       //0b00010000
 
-#define OSR_512         0b00000000
-#define OSR_256         0b01000000
-#define OSR_128         0b10000000
-#define OSR_64          0b11000000
+#define OSR_512           0        //0b00000000
+#define OSR_256           64       //0b01000000
+#define OSR_128           128      //0b10000000
+#define OSR_64            192      //0b11000000
 
 typedef uint8_t byte;
 

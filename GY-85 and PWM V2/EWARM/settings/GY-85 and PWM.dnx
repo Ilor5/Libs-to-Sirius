@@ -3,13 +3,13 @@
     <StLinkDriver>
         <stlinkserialNo>67115228</stlinkserialNo>
         <stlinkfoundProbes />
-        <CStepIntDis>_ 0</CStepIntDis>
-        <LeaveTargetRunning>_ 0</LeaveTargetRunning>
         <stlinkResetStyle>0</stlinkResetStyle>
         <stlinkResetStrategy>2</stlinkResetStrategy>
+        <CStepIntDis>_ 0</CStepIntDis>
+        <LeaveTargetRunning>_ 0</LeaveTargetRunning>
     </StLinkDriver>
     <DebugChecksum>
-        <Checksum>1785362858</Checksum>
+        <Checksum>324491006</Checksum>
     </DebugChecksum>
     <Exceptions>
         <StopOnUncaught>_ 0</StopOnUncaught>
@@ -27,8 +27,8 @@
         <ByteLimit>50</ByteLimit>
     </Stack>
     <Disassembly>
-        <MixedMode>1</MixedMode>
         <InstrCount>0</InstrCount>
+        <MixedMode>1</MixedMode>
     </Disassembly>
     <CodeCoverage>
         <Enabled>0</Enabled>
@@ -101,12 +101,6 @@
         <ShowTimeSum>1</ShowTimeSum>
         <SumSortOrder>0</SumSortOrder>
     </EventLog>
-    <DisassembleMode>
-        <mode>0</mode>
-    </DisassembleMode>
-    <Breakpoints2>
-        <Count>0</Count>
-    </Breakpoints2>
     <TermIOLog>
         <LoggingEnabled>_ 0</LoggingEnabled>
         <LogFile>_ ""</LogFile>
@@ -116,10 +110,6 @@
         <LogFile>_ ""</LogFile>
         <Category>_ 0</Category>
     </LogFile>
-    <Aliases>
-        <Count>0</Count>
-        <SuppressDialog>0</SuppressDialog>
-    </Aliases>
     <DriverProfiling>
         <Enabled>0</Enabled>
         <Mode>3</Mode>
@@ -133,4 +123,20 @@
     <CallStackStripe>
         <ShowTiming>1</ShowTiming>
     </CallStackStripe>
+    <DisassembleMode>
+        <mode>0</mode>
+    </DisassembleMode>
+    <Breakpoints2>
+        <Count>0</Count>
+    </Breakpoints2>
+    <Aliases>
+        <A0>_ "C:\Users\User\STMicroelectronics\GY-85 and PWM V2\Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.c" ""</A0>
+        <A1>_ "C:\Users\User\STMicroelectronics\GY-85 and PWM V2\Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_gpio.c" ""</A1>
+        <A2>_ "C:\Users\User\STMicroelectronics\GY-85 and PWM V2\Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_i2c.c" ""</A2>
+        <A3>_ "C:\Users\User\STMicroelectronics\GY-85 and PWM V2\Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_i2c_ex.c" ""</A3>
+        <A4>_ "C:\Users\User\STMicroelectronics\GY-85 and PWM V2\Src\main.c" ""</A4>
+        <A5>_ "C:\Users\User\STMicroelectronics\GY-85 and PWM V2\Src\stm32l4xx_it.c" ""</A5>
+        <Count>6</Count>
+        <SuppressDialog>0</SuppressDialog>
+    </Aliases>
 </settings>
