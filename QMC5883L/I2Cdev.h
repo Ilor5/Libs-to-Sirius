@@ -37,14 +37,17 @@ THE SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-
+// TODO: include depending on chip family
+//#include "stm32f1xx_hal.h"
+//#include "stm32f2xx_hal.h"
+//#include "stm32f3xx_hal.h"
 #include "stm32l4xx_hal.h"
 
 typedef int bool;
 #define true 1
 #define false 0
 
-uint16_t I2Cdev_readTimeout;
+//uint16_t I2Cdev_readTimeout;
 
 // 1000ms default read timeout (modify with "I2Cdev::readTimeout = [ms];")
 #define I2CDEV_DEFAULT_READ_TIMEOUT     1000
