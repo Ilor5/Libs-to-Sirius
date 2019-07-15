@@ -25,7 +25,8 @@
 /* USER CODE BEGIN Includes */
 #include "ITG3205.h"
 #include <QMC5883L.h>
-#include "math.h"
+#include "calculation.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -40,11 +41,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-/* Private typedef -----------------------------------------------------------*/
 
-/* Private define ------------------------------------------------------------*/
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -55,26 +52,24 @@ TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-/*Инициализируем переменные ****************************************************************************** */
-float rawDataGyroX, rawDataGyroY, rawDataGyroZ, rawDataGyroTemp; /*Параметры гироскопа: угловая скорость в град/сек, температура в цельсиях */
-int rawDataGyro[4];												 /*Массив сырых данных гироскопа */
-int rawDataMagnet[3];											 /*Массив сырых данных магнетометра */
-float heading;													 /*Понять что за переменная в радианах */
-float headingDegrees;											 /*Понять что за переменная в градусах */
-uint8_t PWM_PA3 = 50;											 /*Переменная со значением ШИМ на PA3 */
-uint8_t PWM_PA1 = 150;											 /*Переменная со значением ШИМ на PA1 */
-/****************************************************************************** */
+/*�?нициализируем переменные ****************************************************************************** */
+float calibDataGyro[3]; /*Массив откалиброванных данных гироскопа: угловая скорость в град/сек*/ /*Массив сырых данных гироскопа */
+float calibDataMagnet[3]; /*Массив откалиброванных данных магнетометра: магнитная индукция в микро Тесла */
+char transmitMagnet[36]; /*Массив данных магнетометра на отправку по UART*/
+float currentAngle;		 /*Текущий угол*/
+int pinStatus = 0;		 /*Статус цифровых пинов для ШИМ */
+float koeff = 321037;	/*Коэффициент гашения угловой скорости, нужно установить значение*/
 
+uint8_t PWM_PA3 = 240; /*Переменная со значением ШИМ на PA3 */
+uint8_t PWM_PA1 = 240; /*Переменная со значением ШИМ на PA1 */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-/*Объявление функций для инициализации модулей (трогать не нужно) ************************************** */
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_USART1_UART_Init(void);
-/********************************************************************************************************** */
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -88,7 +83,6 @@ static void MX_USART1_UART_Init(void);
  * @brief  The application entry point.
  * @retval int
  */
-/* Главная функция ***************************************************************************************** */
 int main(void) {
 	/* USER CODE BEGIN 1 */
 
@@ -97,97 +91,85 @@ int main(void) {
 	/* MCU Configuration--------------------------------------------------------*/
 
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	/* Инициализируем библиотеку HAL и подаем 1 на I2C (трогать не нужно) */
 	HAL_Init();
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);
-	HAL_Delay(100);
-	/* *************************************************************************** */
+
 	/* USER CODE BEGIN Init */
 
 	/* USER CODE END Init */
-	/*Конфигурация системного счетчика (трогать не нужно) ****************************************************** */
+
 	/* Configure the system clock */
 	SystemClock_Config();
-	/*********************************************************************************************************** */
+
 	/* USER CODE BEGIN SysInit */
 
 	/* USER CODE END SysInit */
 
 	/* Initialize all configured peripherals */
-	/*Инициализируем модули (трогать не нужно) ***************************************************************** */
 	MX_GPIO_Init();
 	MX_TIM2_Init();
 	MX_I2C3_Init();
 	MX_USART1_UART_Init();
 	I2Cdev_init(&hi2c3);
-	initGyro();
 	QMC5883L_init();
-	/*********************************************************************************************************** */
+	initGyro();
 	/* USER CODE BEGIN 2 */
-
-	/*Начинаем ШИМ ********************************************************************************************* */
+	/*Начинаем ШИМ **********************************************************************************************/
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
-	/*********************************************************************************************************** */
+	HAL_GPIO_WritePin(GPIOB, IN_2_Pin | IN_4_Pin, GPIO_PIN_RESET);
 	/* USER CODE END 2 */
-
+	/*Получаем откалиброванные данные с гироскопа и записываем значения угловой скорости в соответствующий массив*/
+	getGyroscopeData(calibDataGyro);
+	/*Получаем откалиброванные данные с магнитометра и записываем значения поля в µT в соответствующий массив * */
+	QMC5883L_read(calibDataMagnet);
+	/*Рассчитываем "текущий" угол спутника ************************************************************************/
+	currentAngle = ((atan2(-calibDataMagnet[1], calibDataMagnet[0])) * 180) / PI;
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-  /*Бесконечный цикл ***************************************************************************************** */
 	while (1) {
 
-    /*Получаем сырые данные с гироскопа и записываем значения угловой скорости в соответствующие переменные ** */
-		getGyroscopeData(rawDataGyro);
-		rawDataGyroX = rawDataGyro[0] / 14.375;
-		rawDataGyroY = rawDataGyro[1] / 14.375;
-		rawDataGyroZ = rawDataGyro[2] / 14.375;
-		rawDataGyroTemp = (35 + ((double)(rawDataGyro[3] + 13200)) / 280) / 10; // temperature
-    /********************************************************************************************************* */
-		
-    /*Получаем сырые данные с магнитометра и записываем значения (узнать какие) в соответствующие переменные * */
-    QMC5883L_read(rawDataMagnet);
-		// Calculate heading when the rawDataMagnetometer is level, then correct for signs of axis.
-		// Atan2() automatically check the correct formula taking care of the quadrant you are in
-		heading = atan2(rawDataMagnet[1], rawDataMagnet[0]);
-		float declinationAngle = 0.12362748;
-		heading += declinationAngle;
-		// Find yours here: http://www.rawDataMagnetic-declination.com/
+		/*Отправка данных магнитометра по UART ********************************************************************/
+		sprintf(transmitMagnet, "%0.4f    %0.4f   %0.4f\r\n", calibDataMagnet[0], calibDataMagnet[1], calibDataMagnet[2]);
+		HAL_UART_Transmit_IT(&huart1, transmitMagnet, 40);
+		HAL_Delay(50);
 
-		// Correct for when signs are reversed.
-		if (heading < 0)
-			heading += 2 * PI;
-
-		// Check for wrap due to addition of declination.
-		if (heading > 2 * PI)
-			heading -= 2 * PI;
-
-		// Convert radians to degrees for readability.
-		headingDegrees = heading * 180 / PI;
-    /************************************************************************************************************ */
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
 
-    /*Запись значений ШИМ и выставление значений ШИМ ************************************************************ */
-		if (PWM_PA3 > 256) {
-			PWM_PA3 = 255;        //проверка переизбытка ШИМ
-		}
-		if (PWM_PA1 > 256) {
-			PWM_PA1 = 255;        //проверка переизбытка ШИМ
+		/*Запись значений ШИМ, выставление значений ШИМ и включение катушек */
+		pwmValue(koeff, calibDataGyro[2], calibDataMagnet[1], -1, &PWM_PA3, &pinStatus);
+		if (pinStatus == 0) {
+			HAL_GPIO_WritePin(GPIOB, IN_2_Pin, GPIO_PIN_RESET);
+		} else {
+			HAL_GPIO_WritePin(GPIOB, IN_2_Pin, GPIO_PIN_SET);
 		}
 		htim2.Instance->CCR2 = PWM_PA3;
-		htim2.Instance->CCR4 = PWM_PA1;
 
+		pwmValue(koeff, calibDataGyro[2], calibDataMagnet[0], 1, &PWM_PA1, &pinStatus);
+		if (pinStatus == 0) {
+			HAL_GPIO_WritePin(GPIOB, IN_4_Pin, GPIO_PIN_RESET);
+		} else {
+			HAL_GPIO_WritePin(GPIOB, IN_4_Pin, GPIO_PIN_SET);
+		}
+		htim2.Instance->CCR4 = PWM_PA1;
+		/*Выключение катушек ************************************************** */
 		HAL_Delay(100);
+		PWM_PA1 = 0;
+		PWM_PA3 = 0;
+		htim2.Instance->CCR4 = PWM_PA1;
+		htim2.Instance->CCR2 = PWM_PA3;
+
+		/*Получаем сырые данные с гироскопа и записываем значения угловой скорости в соответствующие переменные ** */
+		getGyroscopeData(calibDataGyro);
+		/*Получаем сырые данные с магнитометра и записываем значения (узнать какие) в соответствующие переменные * */
+		QMC5883L_read(calibDataMagnet);
+		/*Рассчитываем "текущий" угол спутника ************************************************************************/
+		currentAngle = ((atan2(-calibDataMagnet[1], calibDataMagnet[0])) * 180) / PI;
 	}
-  /************************************************************************************************************ */
 	/* USER CODE END 3 */
 }
 
-/************************************************************************************************************** */
-
-/*Функции для инициализации модулей (трогать не нужно) ******************************************************** */
 /**
  * @brief System Clock Configuration
  * @retval None
@@ -305,7 +287,7 @@ static void MX_TIM2_Init(void) {
 
 	/* USER CODE END TIM2_Init 1 */
 	htim2.Instance = TIM2;
-	htim2.Init.Prescaler = 0;
+	htim2.Init.Prescaler = 125 - 1;
 	htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
 	htim2.Init.Period = 255;
 	htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -356,7 +338,7 @@ static void MX_USART1_UART_Init(void) {
 
 	/* USER CODE END USART1_Init 1 */
 	huart1.Instance = USART1;
-	huart1.Init.BaudRate = 115200;
+	huart1.Init.BaudRate = 9600;
 	huart1.Init.WordLength = UART_WORDLENGTH_8B;
 	huart1.Init.StopBits = UART_STOPBITS_1;
 	huart1.Init.Parity = UART_PARITY_NONE;
@@ -429,4 +411,3 @@ void assert_failed(char *file, uint32_t line) {
 #endif /* USE_FULL_ASSERT */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
-/************************************************************************************************************** */

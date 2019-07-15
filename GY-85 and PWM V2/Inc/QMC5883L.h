@@ -1,10 +1,6 @@
-/*
-  QMC5883L.h - QMC5883L library
-  Copyright (c) 2017 e-Gizmo Mechatronix Central
-  Rewritten by Amoree.  All right reserved.
-  July 10,2017
-*/
+// Либа для магнитометра
 #include "I2Cdev.h"
+
 #ifndef QMC5883L_h
 #define QMC5883L_h
 #endif
@@ -31,13 +27,13 @@
 #define OSR_64            192      //0b11000000
 
 typedef uint8_t byte;
-
 void QMC5883L_setAddress(uint8_t addr);
 void QMC5883L_init();
 void QMC5883L_setMode(uint16_t mode,uint16_t odr,uint16_t rng,uint16_t osr);
 void QMC5883L_softReset();
-void QMC5883L_read(int* result);
+void QMC5883L_read(float* result);
 void QMC5883L_WriteReg(uint8_t Reg,uint8_t val);
+
 
 
 
