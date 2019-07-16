@@ -144,7 +144,7 @@ int main(void) {
 		} else {
 			HAL_GPIO_WritePin(GPIOB, IN_2_Pin, GPIO_PIN_SET);
 		}
-		htim2.Instance->CCR2 = PWM_PA3;
+		htim2.Instance->CCR4 = PWM_PA3;
 
 		pwmValue(koeff, calibDataGyro[2], calibDataMagnet[0], 1, &PWM_PA1, &pinStatus);
 		if (pinStatus == 0) {
@@ -152,13 +152,13 @@ int main(void) {
 		} else {
 			HAL_GPIO_WritePin(GPIOB, IN_4_Pin, GPIO_PIN_SET);
 		}
-		htim2.Instance->CCR4 = PWM_PA1;
+		htim2.Instance->CCR2 = PWM_PA1;
 		/*Выключение катушек ************************************************** */
 		HAL_Delay(100);
 		PWM_PA1 = 0;
 		PWM_PA3 = 0;
-		htim2.Instance->CCR4 = PWM_PA1;
-		htim2.Instance->CCR2 = PWM_PA3;
+		htim2.Instance->CCR2 = PWM_PA1;
+		htim2.Instance->CCR4 = PWM_PA3;
 
 		/*Получаем сырые данные с гироскопа и записываем значения угловой скорости в соответствующие переменные ** */
 		getGyroscopeData(calibDataGyro);
