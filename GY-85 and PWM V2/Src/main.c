@@ -60,8 +60,8 @@ float currentAngle;		 /*Текущий угол*/
 int pinStatus = 0;		 /*Статус цифровых пинов для ШИМ */
 float koeff = 321037;	/*Коэффициент гашения угловой скорости, нужно установить значение*/
 
-uint8_t PWM_PA3 = 0; /*Переменная со значением ШИМ на PA3 */
-uint8_t PWM_PA1 = 200; /*Переменная со значением ШИМ на PA1 */
+uint8_t PWM_PA3 = 0; /*Переменная со значением ШИМ на PA3 - y*/
+uint8_t PWM_PA1 = 0; /*Переменная со значением ШИМ на PA1  - x*/
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -116,7 +116,7 @@ int main(void) {
 	/*Начинаем ШИМ **********************************************************************************************/
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_4);
-	HAL_GPIO_WritePin(GPIOB, IN_2_Pin | IN_4_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOB, IN_4_Pin | IN_2_Pin, GPIO_PIN_RESET);   //IN_2 - y  IN-4 - x
 	/* USER CODE END 2 */
 	/*Получаем откалиброванные данные с гироскопа и записываем значения угловой скорости в соответствующий массив*/
 	getGyroscopeData(calibDataGyro);
@@ -138,21 +138,21 @@ int main(void) {
 		/* USER CODE BEGIN 3 */
 
 		/*Запись значений ШИМ, выставление значений ШИМ и включение катушек */
-		/*pwmValue(koeff, calibDataGyro[2], calibDataMagnet[1], -1, &PWM_PA3, &pinStatus);
-		if (pinStatus == 0) {
-			HAL_GPIO_WritePin(GPIOB, IN_2_Pin, GPIO_PIN_RESET);
-		} else {
-			HAL_GPIO_WritePin(GPIOB, IN_2_Pin, GPIO_PIN_SET);
-		}*/
-		htim2.Instance->CCR4 = PWM_PA3;
-
-		/*pwmValue(koeff, calibDataGyro[2], calibDataMagnet[0], 1, &PWM_PA1, &pinStatus);
+		pwmValue(koeff, calibDataGyro[2], calibDataMagnet[1], -1, &PWM_PA1, &pinStatus);              //PA1 - x
 		if (pinStatus == 0) {
 			HAL_GPIO_WritePin(GPIOB, IN_4_Pin, GPIO_PIN_RESET);
 		} else {
 			HAL_GPIO_WritePin(GPIOB, IN_4_Pin, GPIO_PIN_SET);
-		}*/
+		}
 		htim2.Instance->CCR2 = PWM_PA1;
+
+		pwmValue(koeff, calibDataGyro[2], calibDataMagnet[0], 1, &PWM_PA3, &pinStatus);               //PA3 - y
+		if (pinStatus == 0) {
+			HAL_GPIO_WritePin(GPIOB, IN_2_Pin, GPIO_PIN_RESET);
+		} else {
+			HAL_GPIO_WritePin(GPIOB, IN_2_Pin, GPIO_PIN_SET);
+		}
+		htim2.Instance->CCR4 = PWM_PA3;
 		/*Выключение катушек ************************************************** */
 		HAL_Delay(100);
 		PWM_PA1 = 0;
