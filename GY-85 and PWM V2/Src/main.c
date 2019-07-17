@@ -25,7 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "ITG3205.h"
 #include <QMC5883L.h>
-//#include "calculation.h"
+#include "calculation.h"
 #include "math.h"
 #include "stdint.h"
 #include <stdio.h>
@@ -39,7 +39,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define PI 3.14159265358979323846
-#define maxVoltage 2		  // V
+#define maxVoltage 2	  // V
 #define stopVelocity 0.01 // rad/sec
 /* USER CODE END PD */
 
@@ -59,14 +59,18 @@ UART_HandleTypeDef huart1;
 /*�?нициализируем переменные ****************************************************************************** */
 float calibDataGyro[3]; /*Массив откалиброванных данных гироскопа: угловая скорость в град/сек*/ /*Массив сырых данных гироскопа */
 float calibDataMagnet[3]; /*Массив откалиброванных данных магнетометра: магнитная индукция в микро Тесла */
-char transmitMagnet[150];	/*Массив данных магнетометра на отправку по UART*/
-float currentAngle;			/*Текущий угол*/
-int pinStatusX = 2, pinStatusY = 2;			/*Статус цифровых пинов для ШИМ */
-const float koeff = 321037; /*Коэффициент гашения угловой скорости, нужно установить значение*/
+char transmitMagnet[150];			/*Массив данных магнетометра на отправку по UART*/
+float currentAngle;					/*Текущий угол*/
+int pinStatusX = 2, pinStatusY = 2; /*Статус цифровых пинов для ШИМ */
+const float koeff = 321037;			/*Коэффициент гашения угловой скорости, нужно установить значение*/
 const float _koeff = 10000;
 uint8_t PWM_PA3 = 0; /*Переменная со значением ШИМ на PA3 - y*/
-uint8_t PWM_PA1 = 0;            /*Переменная со значением ШИМ на PA1  - x*/
+uint8_t PWM_PA1 = 0; /*Переменная со значением ШИМ на PA1  - x*/
 float gyroCalibZ = 0;
+float voltageX = 0, voltageY = 0;
+float magnetMedianX = 0;
+float magnetMedianY = 0;
+float magnetMedianZ = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -79,10 +83,10 @@ static void MX_USART1_UART_Init(void);
 
 /* USER CODE END PFP */
 
-uint8_t m_axis(float k, float omega, float B_axis, int *dir) {
+/*uint8_t m_axis(float k, float omega, float B_axis, int *dir) {
 	*dir = 0;
-	if(!((omega >= stopVelocity) || (-omega >= stopVelocity))){
-	   return 0;
+	if (!((omega >= stopVelocity) || (-omega >= stopVelocity))) {
+		return 0;
 	}
 	float bidot = k * (omega * B_axis);
 	if ((bidot >= maxVoltage) || (-bidot >= maxVoltage)) {
@@ -96,7 +100,7 @@ uint8_t m_axis(float k, float omega, float B_axis, int *dir) {
 		*dir = 1;
 	}
 	return (uint8_t)bidot;
-}
+}*/
 /*
 uint8_t m_axis(float k, float omega, float B_axis, int dir) {
 	dir = 0;
@@ -128,7 +132,7 @@ uint8_t m_axis(float k, float omega, float B_axis, int dir) {
  */
 int main(void) {
 	/* USER CODE BEGIN 1 */
-         int uartCount = 0;
+	int uartCount = 0;
 	/* USER CODE END 1 */
 
 	/* MCU Configuration--------------------------------------------------------*/
@@ -144,7 +148,7 @@ int main(void) {
 	SystemClock_Config();
 
 	/* USER CODE BEGIN SysInit */
-         HAL_Delay(3000);
+	HAL_Delay(3000);
 	/* USER CODE END SysInit */
 
 	/* Initialize all configured peripherals */
@@ -169,6 +173,13 @@ int main(void) {
 	gyroCalibZ /= 3;
 	/*Получаем откалиброванные данные с магнитометра и записываем значения поля в µT в соответствующий массив * */
 	QMC5883L_read(calibDataMagnet);
+	for (int i = 0; i < 3; i++) {
+		QMC5883L_read(calibDataMagnet);
+		magnetMedianX += calibDataMagnet[1];
+		magnetMedianY += calibDataMagnet[0];
+	}
+	calibDataMagnet[1] = (magnetMedianX / 3.0) / 1000000;
+	calibDataMagnet[0] = (magnetMedianY / 3.0) / 1000000;
 	/*Рассчитываем "текущий" угол спутника ************************************************************************/
 	currentAngle = ((atan2(-calibDataMagnet[1], calibDataMagnet[0])) * 180) / PI;
 	/* Infinite loop */
@@ -178,7 +189,7 @@ int main(void) {
 		/*Отправка данных магнитометра по UART ********************************************************************/
 		//		sprintf(transmitMagnet, "          %0.4f    %0.4f   %0.4f\r\n", calibDataMagnet[0], calibDataMagnet[1], calibDataMagnet[2]);
 		//		HAL_Delay(50);
-		
+
 		/* USER CODE END WHILE */
 
 		/* USER CODE BEGIN 3 */
@@ -186,6 +197,7 @@ int main(void) {
 		//		pwmValue(-_koeff, calibDataGyro[2] * PI / 180, calibDataMagnet[1] / 1000000, &PWM_PA1, &pinStatus); // PA1 - x
 
 		float functionGyroScaler = PI / 180;
+
 		/*сalibDataMagnet[0] = 500.0;
 		calibDataMagnet[1] = 0.0;
 		calibDataMagnet[2] = 0.0;
@@ -193,11 +205,18 @@ int main(void) {
 		calibDataGyro[1] = 15.0;
 		calibDataGyro[2] = 20.0;*/
 		// PWM_PA1 = m_axis(-_koeff, 20 * PI / 180, -500.0 / 1000000, &pinStatus); //Axis X
-		PWM_PA1 = m_axis(_koeff, gyroCalibZ * PI / 180, -calibDataMagnet[1] / 1000000, &pinStatusX); // Axis X
+
 		// 4               PWM_PA1 = m_axis(_koeff, 20.0, 500, &pinStatus); // + по X   //4
 		// 2                PWM_PA1 = m_axis(_koeff, 20.0, -500, &pinStatus); // - по X
-                //PWM_PA1 = m_axis(_koeff, 20.0, -200, &pinStatus);
-                
+		// PWM_PA1 = m_axis(_koeff, 20.0, -200, &pinStatus);
+		/*float testMagnet[3] = {0.0, -0.0005, 0.0};
+		float testGyro = 20.0;
+		float testAngle = 0;*/
+		getVoltage(gyroCalibZ * PI / 180, calibDataMagnet, currentAngle, &voltageX, &voltageY);
+		// TEST getVoltage(testGyro * PI / 180, testMagnet, testAngle, &voltageX, &voltageY);
+		scaleVoltage(&voltageX, &voltageY);
+		getPWM(voltageX, &pinStatusX, &PWM_PA1);
+		// PWM_PA1 = m_axis(_koeff, gyroCalibZ * PI / 180, -calibDataMagnet[1] / 1000000, &pinStatusX); // Axis X  ORIG
 		if (pinStatusX == 0) {
 			HAL_GPIO_WritePin(GPIOB, IN_4_Pin, GPIO_PIN_RESET);
 		} else {
@@ -206,28 +225,28 @@ int main(void) {
 		htim2.Instance->CCR2 = PWM_PA1;
 
 		//		pwmValue(_koeff, calibDataGyro[2] * PI / 180, calibDataMagnet[0] / 1000000, &PWM_PA3, &pinStatus); // PA3 - y
-
 		// PWM_PA3 = m_axis(_koeff, 20.0 *  PI / 180, -500.0 / 1000000, &pinStatus); //Axis Y
-		PWM_PA3 = m_axis(_koeff, gyroCalibZ * PI / 180, calibDataMagnet[0] / 1000000, &pinStatusY); // Axis Y
 		// 1              PWM_PA3 = m_axis(_koeff, 20.0, 500, &pinStatus); // + по Y     //1
 		// 3                PWM_PA1 = m_axis(_koeff, 20.0, -500, &pinStatus); // - по Y
-                //PWM_PA1 = m_axis(_koeff, 20.0, 200, &pinStatus);
-                
+		// PWM_PA1 = m_axis(_koeff, 20.0, 200, &pinStatus);
+
+		//PWM_PA3 = m_axis(_koeff, gyroCalibZ * PI / 180, calibDataMagnet[0] / 1000000, &pinStatusY); // Axis Y ORIG
+		getPWM(voltageY, &pinStatusY, &PWM_PA3);
 		if (pinStatusY == 0) {
 			HAL_GPIO_WritePin(GPIOB, IN_2_Pin, GPIO_PIN_RESET);
 		} else {
 			HAL_GPIO_WritePin(GPIOB, IN_2_Pin, GPIO_PIN_SET);
 		}
 		htim2.Instance->CCR4 = PWM_PA3;
-                
-                uartCount++;
-                if(uartCount > 5){
-                  sprintf(transmitMagnet, "dirX = %i  dirY = %i PA1 = %d  PA3 = %d  m_X = %0.2f   m_Y = %0.2f  speed = %0.2f\r\n", pinStatusX, pinStatusY, PWM_PA1, PWM_PA3, calibDataMagnet[0], calibDataMagnet[1], gyroCalibZ * PI / 180.0);
-                  HAL_UART_Transmit_IT(&huart1, transmitMagnet, 150);
-                  uartCount = 0;
-                }
-                HAL_Delay(10);
-                
+
+		uartCount++;
+		if (uartCount > 5) {
+			sprintf(transmitMagnet, "dirX = %i  dirY = %i PA1 = %d  PA3 = %d  m_X = %0.2f   m_Y = %0.2f  speed = %0.2f\r\n", pinStatusX, pinStatusY, PWM_PA1, PWM_PA3, calibDataMagnet[0] * 1000000, calibDataMagnet[1] * 1000000, gyroCalibZ * PI / 180.0);
+			HAL_UART_Transmit_IT(&huart1, transmitMagnet, 150);
+			uartCount = 0;
+		}
+		HAL_Delay(10);
+
 		// Vыключение катушек ************************************************** */
 		HAL_Delay(90);
 		PWM_PA1 = 0;
@@ -237,29 +256,36 @@ int main(void) {
 		HAL_GPIO_WritePin(GPIOB, IN_2_Pin | IN_4_Pin, GPIO_PIN_RESET);
 
 		/*Получаем сырые данные с гироскопа и записываем значения угловой скорости в соответствующие переменные ** */
-		
+
 		for (int i = 0; i < 3; i++) {
 			getGyroscopeData(calibDataGyro);
 			gyroCalibZ += calibDataGyro[2];
 		}
 		gyroCalibZ /= 3;
 		/*Получаем сырые данные с магнитометра и записываем значения (узнать какие) в соответствующие переменные * */
-                HAL_Delay(10);
-                float magnetMedianX = 0;
-                float magnetMedianY = 0;
-                for(int i = 0; i < 3; i++){
-                  QMC5883L_read(calibDataMagnet);
-                  magnetMedianX += calibDataMagnet[1];
-                  magnetMedianY += calibDataMagnet[0];
-                }
-                calibDataMagnet[1] = magnetMedianX / 3.0;
-                calibDataMagnet[0] = magnetMedianY / 3.0;
+		HAL_Delay(10);
+
+		for (int i = 0; i < 3; i++) {
+			QMC5883L_read(calibDataMagnet);
+			magnetMedianY += calibDataMagnet[0];
+                        magnetMedianX += calibDataMagnet[1];
+                        magnetMedianZ += calibDataMagnet[2];
+		}
+                calibDataMagnet[0] = (magnetMedianY / 3.0) / 1000000.0;
+		calibDataMagnet[1] = (magnetMedianX / 3.0) / 1000000.0;
+		calibDataMagnet[2] = (magnetMedianY / 3.0) / 1000000.0;
 		/*Рассчитываем "текущий" угол спутника ************************************************************************/
 		currentAngle = ((atan2(-calibDataMagnet[1], calibDataMagnet[0])) * 180) / PI;
-           //     sprintf(transmitMagnet, "    \r\n   PA1 = %0.4f  PA3 = %0.4f  dirX = %i  dirY = %i   angle = %0.4f  m_X = %0.4f   m_Y = %0.4f\r\n", PWM_PA1, PWM_PA3, pinStatusX, pinStatusY, currentAngle, calibDataMagnet[0], calibDataMagnet[1]);
-           //     HAL_delay(50);
+		    sprintf(transmitMagnet, "    \r\n   PA1 = %0.4f  PA3 = %0.4f  dirX = %i  dirY = %i   angle = %0.4f  m_X = %0.4f   m_Y = %0.4f\r\n", PWM_PA1,
+		     PWM_PA3, pinStatusX, pinStatusY, currentAngle, calibDataMagnet[0], calibDataMagnet[1]); 
+                    //HAL_Delay(50);
+               QMC5883L_read(calibDataMagnet);     
+               sprintf(transmitMagnet, "          %0.4f    %0.4f   %0.4f\r\n", calibDataMagnet[0], calibDataMagnet[1], calibDataMagnet[2]);
+               HAL_Delay(50);
+               HAL_UART_Transmit_IT(&huart1, transmitMagnet, 150);
 	}
 	/* USER CODE END 3 */
+        
 }
 
 /**
