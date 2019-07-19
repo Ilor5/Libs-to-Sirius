@@ -5,8 +5,9 @@
 #define resistance 1,838592     //Om
 #define coil 112        //piece
 #define maxVoltage 2.5 //V
-#define stopVelocity 0.17  //rad/sec
-#define kOmega 20000
+#define stopVelocity 0.025  //rad/sec
+#define kBdot 500000
+#define kOmega 50000
 #define kAlpha (0.04 * kOmega * kOmega)
 #define PI 3.14159265358979323846
 #define angleReq PI/4

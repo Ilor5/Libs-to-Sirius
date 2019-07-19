@@ -7,6 +7,7 @@
 
 #define QMC5883L_ADDR 0x0D //The default I2C address is 0D: 0001101
 
+#define SAT_NUMBER 1
 
 //Registers Control //0x09
 

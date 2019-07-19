@@ -1,3 +1,4 @@
+    
 //Либа для ДУС
 #include "ITG3205.h"
 
@@ -100,3 +101,8 @@ void getGyroscopeData(float *result) {
 	}
 }
 /**********************************************/
+
+void resetGyroscope() {
+    //    int regAddress = 0x1D;
+    //	I2Cdev_readBytes(GYRO, regAddress, 6, buff, 0);
+}

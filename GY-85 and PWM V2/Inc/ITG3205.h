@@ -4,3 +4,4 @@ typedef uint8_t byte;
 void GyroCalibrate();
 void initGyro();
 void getGyroscopeData(float * result);
+void resetGyroscope();
